@@ -50,7 +50,7 @@
             function findN() {
                 var tvm = getValues();
                 var n =(Math.log((tvm.PMT-tvm.FV*tvm.i)/(tvm.PMT+tvm.PV*tvm.i)))/Math.log(1+tvm.i);
-                document.forms["TVM"]['N'].value =  n.toString().substr(0,7);;
+                document.forms["TVM"]['n'].value =  n.toString().substr(0,7);;
             }
 
             function findI() {
