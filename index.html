@@ -1,8 +1,9 @@
-<html>
-    <head>
+
+<!-- saved from url=(0046)https://jeremythughes.github.io/TVMCalculator/ -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>TVM Calculator</title>
         <script>
-            function getValues() {
+            function getValues(equal=false) {
                 var n = document.forms["TVM"]["n"].value*1;
                 var I = document.forms["TVM"]["I"].value*1;
                 var PV = document.forms["TVM"]["PV"].value*1;
@@ -11,10 +12,12 @@
                 var PY = document.forms["TVM"]["P/Y"].value*1;
                 var CY = document.forms["TVM"]["C/Y"].value*1;
 
+                if (equal) { PY=CY; }
                 var i = fromI(I,PY,CY);
 
                 return {
                     n:n,
+                    I:I,
                     i:i,
                     PV:PV,
                     PMT:PMT,
@@ -22,11 +25,11 @@
                     PY:PY,
                     CY:CY
                 };
-
             }
 
             function findPV() {
                 var tvm = getValues();
+                if (tvm.PMT == 0) { tvm = getValues(true); }
                 document.forms["TVM"]['PV'].value = calcPV(tvm);
             }
 
@@ -43,27 +46,36 @@
 
             function findFV() {
                 var tvm = getValues();
+                if (tvm.PMT == 0) { tvm = getValues(true); }
                 var FV = tvm.PMT/tvm.i - (tvm.PV+tvm.PMT/tvm.i)/((1+tvm.i)**(-tvm.n));
                 document.forms["TVM"]['FV'].value =  FV.toString().substr(0,11);;
             }
 
             function findN() {
                 var tvm = getValues();
+                if (tvm.PMT == 0) { tvm = getValues(true); }
                 var n =(Math.log((tvm.PMT-tvm.FV*tvm.i)/(tvm.PMT+tvm.PV*tvm.i)))/Math.log(1+tvm.i);
-                document.forms["TVM"]['n'].value =  n.toString().substr(0,7);;
+                document.forms["TVM"]['n'].value =  n.toString().substr(0,7);;          
             }
 
             function findI() {
+                // Find the interest by trial and error to 4 dp by trying to find the I that gets you to the given PV, based on all other provided values.
                 var tvm = getValues();
-                var I = 1;
+                var I = 0.0001;
+
+                // Find if Loan or Investment
+                if (tvm.PV > tvm.FV ) { } // Loan
+                else if (tvm.PV < tvm.FV ) { } // Investment
+                else {return tvm.I;}
 
                 var test = {...tvm};
                 test.i = fromI(I,tvm.PY, tvm.CY);
                 
                 var goal = tvm.PV;
                 var trial = calcPV(test);
-                while (trial-goal > 0)
+                while (goal-trial > 0)
                 {
+                    if (I == 0.0001) {I -= 0.0001;}
                     I += 1;
                     test.i = fromI(I, tvm.PY, tvm.CY);
                     trial = calcPV(test);
@@ -72,7 +84,7 @@
                 test.i = fromI(I, tvm.PY, tvm.CY);
                 trial = calcPV(test);
 
-                while (trial-goal > 0)
+                while (goal-trial > 0)
                 {
                     I += 0.1;
                     test.i = fromI(I, tvm.PY, tvm.CY);
@@ -82,7 +94,7 @@
                 test.i = fromI(I, tvm.PY, tvm.CY);
                 trial = calcPV(test);
                 
-                while (trial-goal > 0)
+                while (goal-trial > 0)
                 {
                     I += 0.01;
                     test.i = fromI(I, tvm.PY, tvm.CY);
@@ -92,7 +104,7 @@
                 test.i = fromI(I, tvm.PY, tvm.CY);
                 trial = calcPV(test);
                 
-                while (trial-goal > 0)
+                while (goal-trial > 0)
                 {
                     I += 0.001;
                     test.i = fromI(I, tvm.PY, tvm.CY);
@@ -102,13 +114,21 @@
                 test.i = fromI(I, tvm.PY, tvm.CY);
                 trial = calcPV(test);
                 
-                while (trial-goal > 0)
+                while (goal-trial > 0)
                 {
                     I += 0.0001;
                     test.i = fromI(I, tvm.PY, tvm.CY);
                     trial = calcPV(test);
                 }
                 I -= 0.0001;
+
+                while (goal-trial > 0)
+                {
+                    I += 0.00001;
+                    test.i = fromI(I, tvm.PY, tvm.CY);
+                    trial = calcPV(test);
+                }
+                I -= 0.00001;
   
                 document.forms["TVM"]['I'].value = I.toString().substr(0,7);
             }
@@ -120,6 +140,120 @@
             function fromI(I, PY, CY) {
                 return (1 + (I/(100*CY)))**(CY/PY) - 1;
             }
+
+            function setValues(tvm) {
+                document.forms["TVM"]["n"].value = tvm.n;
+                document.forms["TVM"]["I"].value = tvm.I;
+                document.forms["TVM"]["PV"].value = tvm.PV;
+                document.forms["TVM"]["PMT"].value = tvm.PMT;
+                document.forms["TVM"]["FV"].value = tvm.FV;
+                document.forms["TVM"]["P/Y"].value = tvm.PY;
+                document.forms["TVM"]["C/Y"].value = tvm.CY;
+            }
+
+            function runTests() {
+                var input;
+                var output;
+                // Investments
+                    // Find i:
+                    console.log("Test 1: Find i (Investment)")
+
+                    input = {n:30, I:0, PV:-5000, PMT:0, FV:6000, PY:12, CY:12};
+                    output = 7.31499; 
+                    setValues(input);
+
+                    findI();
+                    input = getValues();
+                    test(input.I, output);
+
+
+                    // Find FV:
+                    console.log("Test 2: Find FV (Investment)")
+
+                    input = {n:24, I:3.45, PV:-23000, PMT:0, FV:6000, PY:4, CY:4};
+                    output = 28264.50079; 
+                    setValues(input);
+
+                    findFV();
+                    input = getValues();
+                    test(input.FV, output);
+
+                    // Find FV (with PMT):
+                    console.log("Test 3: Find FV with PMT (Investment)")
+
+                    input = {n:4, I:5, PV:-1500, PMT:-1000, FV:0, PY:1, CY:1};
+                    output = 6133.384375; 
+                    setValues(input);
+
+                    findFV();
+                    input = getValues();
+                    test(input.FV, output);
+
+                    // Find FV (Inflation):
+                    console.log("Test 4: Inflation (part 1) (Investment)")
+
+                    input = {n:36, I:5.4, PV:-10000, PMT:0, FV:0, PY:12, CY:12};
+                    output = 11754.32999; 
+                    setValues(input);
+
+                    findFV();
+                    input = getValues();
+                    test(input.FV, output);
+
+                    // Find I% (Inflation)):
+                    console.log("Test 5: Inflation (part 2) (Investment)")
+
+                    input = {n:3, I:0, PV:-10612.08, PMT:0, FV:11754.33, PY:1, CY:1};
+                    output = 3.46628; 
+                    setValues(input);
+
+                    findI();
+                    input = getValues();
+                    test(input.I, output);
+
+                    // Find n:
+                    console.log("Test 6: Find n (Investment)")
+
+                    input = {n:3, I:6.45, PV:-4000, PMT:0, FV:10000, PY:2, CY:2};
+                    output = 28.8678; 
+                    setValues(input);
+
+                    findN();
+                    input = getValues();
+                    test(input.n, output);
+
+                    // Find PV:
+                    console.log("Test 7: Find PV (Investment)")
+
+                    input = {n:12, I:5.20, PV:0, PMT:0, FV:5000, PY:4, CY:4};
+                    output = -4282.09856; 
+                    setValues(input);
+
+                    findPV();
+                    input = getValues();
+                    test(input.PV, output);
+
+                    // Find PMT:
+                    console.log("Test 8: Find PMT (Investment)")
+
+                    input = {n:72, I:5.45, PV:0, PMT:0, FV:25000, PY:12, CY:12};
+                    output = -294.3208; 
+                    setValues(input);
+
+                    findPMT();
+                    input = getValues();
+                    test(input.PMT, output);
+            }
+
+            function test(input, output) {
+                if (input == output) { console.log("Passed") }
+                    else {
+                        console.log("Failed");
+                        console.log("Got " + input + " when expecting " + output + "."); 
+                    }
+            }
+
+
         </script>
     </head>
     <body>
@@ -127,30 +261,31 @@
         <form name="TVM">
             <label for="n">n = </label> 
             <input type="text" id="n" name="n" value="0">
-            <input type="button" onclick="findN()" value = "Solve for n"></br>
+            <input type="button" onclick="findN()" value="Solve for n"><br>
     
             <label for="n">I% = </label>
             <input type="text" id="I" name="I" value="0">
-            <input type="button" onclick="findI()" value = "Solve for I%"></br>
+            <input type="button" onclick="findI()" value="Solve for I%"><br>
     
             <label for="n">PV = </label>
             <input type="text" id="PV" name="PV" value="0">
-            <input type="button" onclick="findPV()" value = "Solve for PV"></br>
+            <input type="button" onclick="findPV()" value="Solve for PV"><br>
     
             <label for="n">PMT = </label>
             <input type="text" id="PMT" name="PMT" value="0">
-            <input type="button" onclick="findPMT()" value = "Solve for PMT"></br>
+            <input type="button" onclick="findPMT()" value="Solve for PMT"><br>
     
             <label for="n">FV = </label>
             <input type="text" id="FV" name="FV" value="0">
-            <input type="button" onclick="findFV()" value = "Solve for FV"></br>
+            <input type="button" onclick="findFV()" value="Solve for FV"><br>
     
             <label for="n">P/Y = </label>
-            <input type="text" id="PY" name="P/Y" value="1"></br>
+            <input type="text" id="PY" name="P/Y" value="1"><br>
     
             <label for="n">C/Y = </label>
             <input type="text" id="CY" name="C/Y" value="1">
         </form>
-    </body>
     
-</html>
+    
+
+</body></html>
